@@ -1,5 +1,4 @@
 import asyncio
-import time
 from typing import Generator
 from fastapi import FastAPI
 from fastapi import WebSocket
@@ -8,11 +7,13 @@ import queue
 
 app = FastAPI()
 
+websocket_objects = []
+websockets_lock = asyncio.Lock()
+
 
 # Stub generator function (using websocket B in internal)
 def stream_client_start(input_gen: Generator) -> Generator:
     for chunk in input_gen:
-        time.sleep(1)
         yield f"Get {chunk}"
 
 
@@ -32,7 +33,8 @@ async def forward(ws_a: WebSocket, queue_b):
 async def reverse(ws_a: WebSocket, queue_b):
     while True:
         data = await queue_b.get()
-        await ws_a.send_text(data)
+        for ws in websocket_objects:
+            await ws.send_text(data)
         print("websocket A sent:", data)
 
 
@@ -48,6 +50,9 @@ async def websocket_a(ws_a: WebSocket):
     fwd_queue = janus.Queue()
     rev_queue = janus.Queue()
     await ws_a.accept()
+
+    async with websockets_lock:
+        websocket_objects.append(ws_a)
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
