@@ -1,7 +1,7 @@
 import asyncio
 from typing import Generator
 from fastapi import FastAPI
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 import janus
 import queue
 
@@ -23,20 +23,34 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
         yield sync_queue.get()
 
 
+async def disconnect(socket_object):
+    await socket_object.close()
+    for websocket_object in websocket_objects:
+        if websocket_object == socket_object:
+            websocket_objects.remove(websocket_object)
+            break
+
+
 async def forward(ws_a: WebSocket, queue_b):
-    while True:
-        data = await ws_a.receive_bytes()
-        print("websocket A received:", data)
-        await queue_b.put(data)
+    try:
+        while True:
+            data = await ws_a.receive_bytes()
+            print("websocket A received:", data)
+            await queue_b.put(data)
+    except WebSocketDisconnect:
+        await disconnect(ws_a)
 
 
 async def reverse(queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            if ws['room_id'] == room_id:
-                await ws['ws_object'].send_bytes(data)
-                print("websocket A sent:", data)
+            try:
+                if ws['room_id'] == room_id:
+                    await ws['ws_object'].send_bytes(data)
+                    print("websocket A sent:", data)
+            except WebSocketDisconnect:
+                await disconnect(ws['ws_object'])
 
 
 def process_b_client(fwd_queue, rev_queue):
