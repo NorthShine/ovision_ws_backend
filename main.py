@@ -25,17 +25,17 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
 
 async def forward(ws_a: WebSocket, queue_b):
     while True:
-        data = await ws_a.receive_text()
+        data = await ws_a.receive_bytes()
         print("websocket A received:", data)
         await queue_b.put(data)
 
 
-async def reverse(ws_a: WebSocket, queue_b, room_id):
+async def reverse(queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
             if ws['room_id'] == room_id:
-                await ws['ws_object'].send_text(data)
+                await ws['ws_object'].send_bytes(data)
                 print("websocket A sent:", data)
 
 
@@ -57,5 +57,5 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
-    rev_task = asyncio.create_task(reverse(ws_a, rev_queue.async_q, room_id))
+    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id))
     await asyncio.gather(process_client_task, fwd_task, rev_task)
