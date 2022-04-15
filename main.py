@@ -30,12 +30,13 @@ async def forward(ws_a: WebSocket, queue_b):
         await queue_b.put(data)
 
 
-async def reverse(ws_a: WebSocket, queue_b):
+async def reverse(ws_a: WebSocket, queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            await ws.send_text(data)
-        print("websocket A sent:", data)
+            if ws['room_id'] == room_id:
+                await ws['ws_object'].send_text(data)
+                print("websocket A sent:", data)
 
 
 def process_b_client(fwd_queue, rev_queue):
@@ -44,17 +45,17 @@ def process_b_client(fwd_queue, rev_queue):
         rev_queue.put(r)
 
 
-@app.websocket("/ws_a")
-async def websocket_a(ws_a: WebSocket):
+@app.websocket("/ws_a/{room_id}")
+async def websocket_a(ws_a: WebSocket, room_id: int):
     loop = asyncio.get_event_loop()
     fwd_queue = janus.Queue()
     rev_queue = janus.Queue()
     await ws_a.accept()
 
     async with websockets_lock:
-        websocket_objects.append(ws_a)
+        websocket_objects.append({'ws_object': ws_a, 'room_id': room_id})
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
-    rev_task = asyncio.create_task(reverse(ws_a, rev_queue.async_q))
+    rev_task = asyncio.create_task(reverse(ws_a, rev_queue.async_q, room_id))
     await asyncio.gather(process_client_task, fwd_task, rev_task)
