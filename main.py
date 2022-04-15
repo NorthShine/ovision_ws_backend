@@ -24,7 +24,7 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
 
 async def forward(ws_a: WebSocket, queue_b):
     while True:
-        data = await ws_a.receive_bytes()
+        data = await ws_a.receive_text()
         print("websocket A received:", data)
         await queue_b.put(data)
 

@@ -1,3 +1,4 @@
 janus
 fastapi
 uvicorn
+websockets
