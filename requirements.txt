@@ -2,3 +2,4 @@ janus
 fastapi
 uvicorn
 websockets
+cv2
