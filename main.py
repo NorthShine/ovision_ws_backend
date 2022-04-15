@@ -59,3 +59,10 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
     rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id))
     await asyncio.gather(process_client_task, fwd_task, rev_task)
+
+
+@app.get("/unique_room_id")
+async def get_unique_room_id():
+    if websocket_objects is None:
+        return {'room_id': 1}
+    return {'room_id': websocket_objects[-1]['room_id'] + 1}
