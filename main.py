@@ -77,6 +77,6 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
 
 @app.get("/unique_room_id")
 async def get_unique_room_id():
-    if websocket_objects is None:
+    if len(websocket_objects) == 0:
         return {'room_id': 1}
     return {'room_id': websocket_objects[-1]['room_id'] + 1}
