@@ -1,8 +1,12 @@
 import asyncio
+import logging
+
 from typing import Generator
 from fastapi import FastAPI
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_utils.timing import add_timing_middleware, record_timing
+
 import janus
 import queue
 import numpy as np
@@ -13,6 +17,9 @@ from network.face_detection import transform
 
 
 app = FastAPI()
+
+logger = logging.getLogger()
+# add_timing_middleware(app, record=logger.info, prefix="app", exclude="untimed")
 
 websocket_objects = []
 websockets_lock = asyncio.Lock()
@@ -31,6 +38,7 @@ app.add_middleware(
 # Stub generator function (using websocket B in internal)
 def stream_client_start(input_gen: Generator) -> Generator:
     for chunk in input_gen:
+        print(chunk.decode())
         yield chunk
 
 
@@ -55,7 +63,7 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = np.asarray(bytearray(data), np.uint8)
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
-            data = base64.b64decode(frame)
+            data = base64.b64encode(frame)
             await queue_b.put(data)
     except WebSocketDisconnect:
         await disconnect(ws_a)
