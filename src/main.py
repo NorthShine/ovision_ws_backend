@@ -1,3 +1,6 @@
+from logging.config import dictConfig
+from src.logging_config import LogConfig
+
 import asyncio
 from email.mime import image
 import logging
@@ -16,10 +19,12 @@ import base64
 
 from network.face_detection import transform
 
+WEBSOCKET_DISCONNECTED_STATE = 2
 
 app = FastAPI()
 
-logger = logging.getLogger()
+dictConfig(LogConfig().dict())
+logger = logging.getLogger("ovision")
 # add_timing_middleware(app, record=logger.info, prefix="app", exclude="untimed")
 
 websocket_objects = []
@@ -59,13 +64,14 @@ async def disconnect(socket_object: WebSocket):
 async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
-            data = await ws_a.receive_bytes()
-            frame = np.asarray(bytearray(data), np.uint8)
-            frame = cv2.imdecode(frame, -1)
-            frame = transform(frame)
-            frame = cv2.imencode('.jpg', frame)[1]
-            data = base64.b64encode(frame).decode('utf-8')
-            await queue_b.put(data)
+            if ws_a.client_state != WEBSOCKET_DISCONNECTED_STATE:
+                data = await ws_a.receive_bytes()
+                frame = np.asarray(bytearray(data), np.uint8)
+                frame = cv2.imdecode(frame, -1)
+                frame = transform(frame)
+                frame = cv2.imencode('.jpg', frame)[1]
+                data = base64.b64encode(frame).decode('utf-8')
+                await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
 
@@ -74,7 +80,7 @@ async def reverse(queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            if ws['room_id'] == room_id:
+            if ws['room_id'] == room_id and ws.client_state != WEBSOCKET_DISCONNECTED_STATE:
                 try:
                     await ws['ws_object'].send_bytes(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
@@ -92,7 +98,6 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     loop = asyncio.get_event_loop()
     fwd_queue = janus.Queue()
     rev_queue = janus.Queue()
-    await ws_a.accept()
 
     async with websockets_lock:
         websocket_objects.append({'ws_object': ws_a, 'room_id': room_id})
