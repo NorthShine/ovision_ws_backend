@@ -2,6 +2,7 @@ import asyncio
 from typing import Generator
 from fastapi import FastAPI
 from fastapi import WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 import janus
 import queue
 
@@ -9,6 +10,16 @@ app = FastAPI()
 
 websocket_objects = []
 websockets_lock = asyncio.Lock()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Stub generator function (using websocket B in internal)
