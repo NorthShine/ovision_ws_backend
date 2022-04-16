@@ -78,11 +78,11 @@ async def forward(ws_a: WebSocket, queue_b):
         await disconnect(ws_a)
 
 
-async def reverse(queue_b, room_id):
+async def reverse(queue_b, room_id, user_ip):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            if ws['room_id'] == room_id:
+            if ws['room_id'] == room_id and ws['user_ip'] != user_ip:
                 try:
                     await ws['ws_object'].send_bytes(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
@@ -105,11 +105,15 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     await ws_a.accept()
 
     async with websockets_lock:
-        websocket_objects.append({'ws_object': ws_a, 'room_id': room_id})
+        websocket_objects.append({
+            'ws_object': ws_a,
+            'room_id': room_id,
+            'user_ip': ws_a.client.host,
+        })
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
-    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id))
+    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id, ws_a.client.host))
     await asyncio.gather(process_client_task, fwd_task, rev_task)
 
 
@@ -118,3 +122,8 @@ async def get_unique_room_id():
     if len(websocket_objects) == 0:
         return {'room_id': 1}
     return {'room_id': websocket_objects[-1]['room_id'] + 1}
+
+
+@app.get("/available_rooms")
+async def get_available_rooms():
+    return {'rooms': [ws['room_id'] for ws in websocket_objects]}
