@@ -72,7 +72,10 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
             frame = cv2.imencode('.jpg', frame)[1]
-            data = {ws_a.client.host: base64.b64encode(frame).decode('utf-8')}
+            data = {
+                'user': ws_a.client.host,
+                'frame': base64.b64encode(frame).decode('utf-8'),
+            }
             await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
@@ -103,13 +106,11 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     fwd_queue = janus.Queue()
     rev_queue = janus.Queue()
     await ws_a.accept()
-    sender = ws_a.client.host
 
     async with websockets_lock:
         websocket_objects.append({
             'ws_object': ws_a,
             'room_id': room_id,
-            'sender': sender,
         })
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
