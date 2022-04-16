@@ -82,7 +82,7 @@ async def reverse(queue_b, room_id, user_ip):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            if ws['room_id'] == room_id and ws['user_ip'] != user_ip:
+            if ws['room_id'] == room_id and ws['sender'] != user_ip:
                 try:
                     await ws['ws_object'].send_bytes(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
@@ -103,17 +103,18 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     fwd_queue = janus.Queue()
     rev_queue = janus.Queue()
     await ws_a.accept()
+    sender = ws_a.client.host
 
     async with websockets_lock:
         websocket_objects.append({
             'ws_object': ws_a,
             'room_id': room_id,
-            'user_ip': ws_a.client.host,
+            'sender': sender,
         })
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
-    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id, ws_a.client.host))
+    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id, sender))
     await asyncio.gather(process_client_task, fwd_task, rev_task)
 
 
