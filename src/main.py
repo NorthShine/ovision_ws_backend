@@ -1,6 +1,3 @@
-from logging.config import dictConfig
-from src.logging_config import LogConfig
-
 import asyncio
 from email.mime import image
 import logging
@@ -19,12 +16,10 @@ import base64
 
 from network.face_detection import transform
 
-WEBSOCKET_CONNECTED_STATE = 1
 
 app = FastAPI()
 
-dictConfig(LogConfig().dict())
-logger = logging.getLogger("ovision")
+logger = logging.getLogger()
 # add_timing_middleware(app, record=logger.info, prefix="app", exclude="untimed")
 
 websocket_objects = []
@@ -54,7 +49,10 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
 
 
 async def disconnect(socket_object: WebSocket):
-    await socket_object.close()
+    try:
+        await socket_object.close()
+    except RuntimeError:
+        pass
     for websocket_object in websocket_objects:
         if websocket_object == socket_object:
             websocket_objects.remove(websocket_object)
@@ -97,6 +95,7 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     loop = asyncio.get_event_loop()
     fwd_queue = janus.Queue()
     rev_queue = janus.Queue()
+    await ws_a.accept()
 
     async with websockets_lock:
         websocket_objects.append({'ws_object': ws_a, 'room_id': room_id})
