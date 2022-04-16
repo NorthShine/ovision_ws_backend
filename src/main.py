@@ -62,18 +62,12 @@ async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
             data = await ws_a.receive_bytes()
-
-            str_data = np.asarray(bytearray(data), np.uint8)
-            str_data = base64.b64decode(str_data)
-            if str_data == 'ping':
-                await ws_a.send_bytes(b'ok')
-            else:
-                frame = np.asarray(bytearray(data), np.uint8)
-                frame = cv2.imdecode(frame, -1)
-                frame = transform(frame)
-                frame = cv2.imencode('.jpg', frame)[1]
-                data = base64.b64encode(frame).decode('utf-8')
-                await queue_b.put(data)
+            frame = np.asarray(bytearray(data), np.uint8)
+            frame = cv2.imdecode(frame, -1)
+            frame = transform(frame)
+            frame = cv2.imencode('.jpg', frame)[1]
+            data = base64.b64encode(frame).decode('utf-8')
+            await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
 
