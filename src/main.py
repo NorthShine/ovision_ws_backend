@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_utils.timing import add_timing_middleware, record_timing
+from websockets.exceptions import ConnectionClosedError
 
 import janus
 import queue
@@ -65,7 +66,7 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = transform(frame)
             data = base64.b64encode(frame)
             await queue_b.put(data)
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
 
 
@@ -73,11 +74,11 @@ async def reverse(queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            try:
-                if ws['room_id'] == room_id:
+            if ws['room_id'] == room_id:
+                try:
                     await ws['ws_object'].send_bytes(data)
-            except WebSocketDisconnect:
-                await disconnect(ws['ws_object'])
+                except (WebSocketDisconnect, ConnectionClosedError):
+                    await disconnect(ws['ws_object'])
 
 
 def process_b_client(fwd_queue, rev_queue):

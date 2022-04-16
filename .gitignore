@@ -19,6 +19,8 @@ docs_build
 venv
 docs.zip
 archive.zip
+img.png
+sub.py
 
 # vim temporary files
 *~
