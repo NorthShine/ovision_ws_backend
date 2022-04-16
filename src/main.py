@@ -47,15 +47,21 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
         yield sync_queue.get()
 
 
+async def remove_ws_object_from_websockets(ws_obj):
+    async with websockets_lock:
+        for websocket_object in websocket_objects:
+            if websocket_object == ws_obj:
+                websocket_objects.remove(websocket_object)
+                break
+
+
 async def disconnect(socket_object: WebSocket):
     try:
         await socket_object.close()
     except RuntimeError:
         pass
-    for websocket_object in websocket_objects:
-        if websocket_object == socket_object:
-            websocket_objects.remove(websocket_object)
-            break
+    finally:
+        await remove_ws_object_from_websockets(socket_object)
 
 
 async def forward(ws_a: WebSocket, queue_b):
@@ -79,8 +85,10 @@ async def reverse(queue_b, room_id):
             if ws['room_id'] == room_id:
                 try:
                     await ws['ws_object'].send_bytes(data)
-                except (WebSocketDisconnect, ConnectionClosedError, RuntimeError):
+                except (WebSocketDisconnect, ConnectionClosedError):
                     await disconnect(ws['ws_object'])
+                except RuntimeError:
+                    await remove_ws_object_from_websockets(ws['ws_object'])
 
 
 def process_b_client(fwd_queue, rev_queue):
