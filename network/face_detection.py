@@ -1,20 +1,8 @@
 import cv2
 import cv2.dnn
-
 import numpy as np
 
-MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
-ageList = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
-genderList = ['Male', 'Female']
-
-faceProto = "weights/opencv_face_detector.pbtxt"
-faceModel = "weights/opencv_face_detector_uint8.pb"
-
-ageProto = "weights/age_deploy.prototxt"
-ageModel = "weights/age_net.caffemodel"
-
-genderProto = "weights/gender_deploy.prototxt"
-genderModel = "weights/gender_net.caffemodel"
+from network.config import *
 
 faceNet = cv2.dnn.readNet(faceModel, faceProto)
 ageNet = cv2.dnn.readNet(ageModel, ageProto)
@@ -24,7 +12,6 @@ padding = 20
 
 
 def faceBox(faceNet, frame: np.array) -> np.array:
-    print(frame)
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
     blob = cv2.dnn.blobFromImage(frame, 1.0, (227, 227), [104, 117, 123], swapRB=False)
@@ -46,10 +33,12 @@ def faceBox(faceNet, frame: np.array) -> np.array:
 
 def transform(frame: np.array, facenet: cv2.dnn_Net, gendernet: cv2.dnn_Net, agenet: cv2.dnn_Net) -> np.array:
     frame, bboxs = faceBox(facenet, frame)
+    if not bboxs:
+        return frame
+
     for bbox in bboxs:
         face = frame[max(0, bbox[1] - padding):min(bbox[3] + padding, frame.shape[0] - 1),
                max(0, bbox[0] - padding):min(bbox[2] + padding, frame.shape[1] - 1)]
-        print(type(face))
         blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227),
                                      MODEL_MEAN_VALUES, swapRB=False)
 
