@@ -7,6 +7,7 @@ from network.config import *
 faceNet = cv2.dnn.readNet(faceModel, faceProto)
 ageNet = cv2.dnn.readNet(ageModel, ageProto)
 genderNet = cv2.dnn.readNet(genderModel, genderProto)
+emoNet = cv2.dnn.readNetFromONNX(emoModel)
 
 padding = 20
 
@@ -35,7 +36,8 @@ def transform(
         frame: np.array, 
         facenet: cv2.dnn_Net = faceNet,
         gendernet: cv2.dnn_Net = genderNet, 
-        agenet: cv2.dnn_Net = ageNet) -> np.array:
+        agenet: cv2.dnn_Net = ageNet,
+        emonet: cv2.dnn_Net=emoNet) -> np.array:
     frame, bboxs = faceBox(facenet, frame)
     if not bboxs:
         return frame
@@ -45,7 +47,9 @@ def transform(
                max(0, bbox[0] - padding):min(bbox[2] + padding, frame.shape[1] - 1)]
         blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227),
                                      MODEL_MEAN_VALUES, swapRB=False)
-
+        gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+        blob_emo = cv2.dnn.blobFromImage(gray, 1.0, (64, 64),
+                                     MODEL_MEAN_VALUES, swapRB=False)
         gendernet.setInput(blob)
         genderPred = gendernet.forward()
         gender = genderList[genderPred[0].argmax()]
@@ -54,7 +58,11 @@ def transform(
         agePred = agenet.forward()
         age = ageList[agePred[0].argmax()]
 
-        label = "{}, {}".format(gender, age)
+        emonet.setInput(blob_emo)
+        emoPred = emonet.forward()
+        emo=emoList[emoPred[0].argmax()]
+
+        label = "{}, {}, {}".format(gender, age, emo)
         cv2.rectangle(frame, (bbox[0], bbox[1] - 30), (bbox[2], bbox[1]),
                       (0, 255, 0), -1)
         cv2.putText(frame, label, (bbox[0], bbox[1] - 10), cv2.FONT_HERSHEY_PLAIN,
@@ -63,4 +71,4 @@ def transform(
         return frame
 
 # img = cv2.imread('weights/1.jpg', 1)
-# cv2.imwrite('weights/2.jpg', transform(img))
+# cv2.imwrite('weights/2.jpg', transform(img, faceNet, genderNet, ageNet, emoNet))
