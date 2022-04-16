@@ -79,7 +79,7 @@ async def reverse(queue_b, room_id):
             if ws['room_id'] == room_id:
                 try:
                     await ws['ws_object'].send_bytes(data)
-                except (WebSocketDisconnect, ConnectionClosedError):
+                except (WebSocketDisconnect, ConnectionClosedError, RuntimeError):
                     await disconnect(ws['ws_object'])
 
 
