@@ -72,19 +72,19 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
             frame = cv2.imencode('.jpg', frame)[1]
-            data = base64.b64encode(frame).decode('utf-8')
+            data = {ws_a.client.host: base64.b64encode(frame).decode('utf-8')}
             await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
 
 
-async def reverse(queue_b, room_id, user_ip):
+async def reverse(queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            if ws['room_id'] == room_id and ws['sender'] != user_ip:
+            if ws['room_id'] == room_id:
                 try:
-                    await ws['ws_object'].send_bytes(data)
+                    await ws['ws_object'].send_json(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
                     await disconnect(ws['ws_object'])
                 except RuntimeError:
@@ -114,7 +114,7 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
-    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id, sender))
+    rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id))
     await asyncio.gather(process_client_task, fwd_task, rev_task)
 
 
