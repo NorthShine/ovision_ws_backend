@@ -1,4 +1,5 @@
 import asyncio
+from email.mime import image
 import logging
 
 from typing import Generator
@@ -62,6 +63,7 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = np.asarray(bytearray(data), np.uint8)
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
+            frame = cv2.imencode('.jpg', frame)[1]
             data = base64.b64encode(frame)
             await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
