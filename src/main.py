@@ -7,7 +7,9 @@ import janus
 import queue
 import numpy as np
 import cv2
-import timeit
+import base64
+
+from network.face_detection import transform
 
 
 app = FastAPI()
@@ -52,6 +54,8 @@ async def forward(ws_a: WebSocket, queue_b):
             data = await ws_a.receive_bytes()
             frame = np.asarray(bytearray(data), np.uint8)
             frame = cv2.imdecode(frame, -1)
+            frame = transform(frame)
+            data = base64.b64decode(frame)
             await queue_b.put(data)
     except WebSocketDisconnect:
         await disconnect(ws_a)

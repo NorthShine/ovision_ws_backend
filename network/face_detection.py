@@ -31,7 +31,11 @@ def faceBox(faceNet, frame: np.array) -> np.array:
     return frame, bboxs
 
 
-def transform(frame: np.array, facenet: cv2.dnn_Net, gendernet: cv2.dnn_Net, agenet: cv2.dnn_Net) -> np.array:
+def transform(
+        frame: np.array, 
+        facenet: cv2.dnn_Net = faceNet,
+        gendernet: cv2.dnn_Net = genderNet, 
+        agenet: cv2.dnn_Net = ageNet) -> np.array:
     frame, bboxs = faceBox(facenet, frame)
     if not bboxs:
         return frame
