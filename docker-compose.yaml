@@ -2,14 +2,14 @@ version: "3.8"
 
 services:
     web:
-        build: nginx
+        image: nginx:latest
         ports:
           - 80:80
         depends_on:
           - api
 
     api:
-        build: src
+        build: .
         environment:
           - PORT=8080
         ports:
