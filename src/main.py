@@ -5,7 +5,6 @@ from typing import Generator
 from fastapi import FastAPI
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_utils.timing import add_timing_middleware, record_timing
 
 import janus
 import queue
