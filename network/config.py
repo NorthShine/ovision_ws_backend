@@ -13,6 +13,6 @@ ageModel = "network/weights/age_net.caffemodel"
 genderProto = "network/weights/gender_deploy.prototxt"
 genderModel = "network/weights/gender_net.caffemodel"
 
-emoModel = "network/weights/emotion-feprus.onnx"
+emoModel = "network/weights/emotion-ferplus.onnx"
 
 
