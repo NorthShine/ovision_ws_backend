@@ -63,6 +63,10 @@ async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
             data = await ws_a.receive_bytes()
+
+            if data.decode() == 'ping':
+                await ws_a.send_bytes('ok'.encode())
+
             frame = np.asarray(bytearray(data), np.uint8)
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
@@ -90,19 +94,6 @@ def process_b_client(fwd_queue, rev_queue):
         rev_queue.put(r)
 
 
-async def health_check(ws: WebSocket):
-    while True:
-        await asyncio.sleep(5)
-        try:
-            await ws.send_text('PING')
-            data = await ws.receive_text()
-            await asyncio.sleep(1)
-            if not data:
-                await disconnect(ws)
-        except (WebSocketDisconnect, ConnectionClosedError):
-            await disconnect(ws)
-
-
 @app.websocket("/ws_a/{room_id}")
 async def websocket_a(ws_a: WebSocket, room_id: int):
     loop = asyncio.get_event_loop()
@@ -116,8 +107,7 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
     rev_task = asyncio.create_task(reverse(rev_queue.async_q, room_id))
-    health_check_task = asyncio.create_task(health_check(ws_a))
-    await asyncio.gather(process_client_task, fwd_task, rev_task, health_check_task)
+    await asyncio.gather(process_client_task, fwd_task, rev_task)
 
 
 @app.get("/unique_room_id")
