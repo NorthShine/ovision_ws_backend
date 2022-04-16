@@ -1,5 +1,4 @@
 import asyncio
-from email.mime import image
 import logging
 
 from typing import Generator
