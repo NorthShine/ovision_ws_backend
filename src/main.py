@@ -31,7 +31,7 @@ app.add_middleware(
 # Stub generator function (using websocket B in internal)
 def stream_client_start(input_gen: Generator) -> Generator:
     for chunk in input_gen:
-        yield f"{chunk}"
+        yield chunk
 
 
 # queue to generator auxiliary adapter
