@@ -5,7 +5,6 @@ from typing import Generator
 from fastapi import FastAPI
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_utils.timing import add_timing_middleware, record_timing
 from websockets.exceptions import ConnectionClosedError
 
 import janus
@@ -39,7 +38,6 @@ app.add_middleware(
 # Stub generator function (using websocket B in internal)
 def stream_client_start(input_gen: Generator) -> Generator:
     for chunk in input_gen:
-        print(chunk.decode())
         yield chunk
 
 
