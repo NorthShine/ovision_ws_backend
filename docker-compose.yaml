@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+    web:
+        build: nginx
+        ports:
+          - 80:80
+        depends_on:
+          - api
+
+    api:
+        build: src
+        environment:
+          - PORT=8080
+        ports:
+          - 8080:8080
