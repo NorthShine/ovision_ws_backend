@@ -37,7 +37,6 @@ app.add_middleware(
 # Stub generator function (using websocket B in internal)
 def stream_client_start(input_gen: Generator) -> Generator:
     for chunk in input_gen:
-        print(chunk.decode())
         yield chunk
 
 
