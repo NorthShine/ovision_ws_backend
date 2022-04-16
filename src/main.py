@@ -72,7 +72,10 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
             frame = cv2.imencode('.jpg', frame)[1]
-            data = base64.b64encode(frame).decode('utf-8')
+            data = {
+                'user': ws_a.client.host,
+                'frame': base64.b64encode(frame).decode('utf-8'),
+            }
             await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
@@ -84,7 +87,7 @@ async def reverse(queue_b, room_id):
         for ws in websocket_objects:
             if ws['room_id'] == room_id:
                 try:
-                    await ws['ws_object'].send_bytes(data)
+                    await ws['ws_object'].send_json(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
                     await disconnect(ws['ws_object'])
                 except RuntimeError:
@@ -105,7 +108,10 @@ async def websocket_a(ws_a: WebSocket, room_id: int):
     await ws_a.accept()
 
     async with websockets_lock:
-        websocket_objects.append({'ws_object': ws_a, 'room_id': room_id})
+        websocket_objects.append({
+            'ws_object': ws_a,
+            'room_id': room_id,
+        })
 
     process_client_task = loop.run_in_executor(None, process_b_client, fwd_queue.sync_q, rev_queue.sync_q)
     fwd_task = asyncio.create_task(forward(ws_a, fwd_queue.async_q))
@@ -118,3 +124,8 @@ async def get_unique_room_id():
     if len(websocket_objects) == 0:
         return {'room_id': 1}
     return {'room_id': websocket_objects[-1]['room_id'] + 1}
+
+
+@app.get("/available_rooms")
+async def get_available_rooms():
+    return {'rooms': [ws['room_id'] for ws in websocket_objects]}
