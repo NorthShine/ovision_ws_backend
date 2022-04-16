@@ -62,14 +62,6 @@ async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
             data = await ws_a.receive_bytes()
-
-            try:
-                str_data = base64.b64decode(data).decode('utf-8')
-                if str_data == 'ping':
-                    await ws_a.send_bytes(b'ok')
-            except UnicodeDecodeError:
-                pass
-
             frame = np.asarray(bytearray(data), np.uint8)
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
