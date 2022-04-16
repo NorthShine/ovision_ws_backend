@@ -7,6 +7,7 @@ import janus
 import queue
 import numpy as np
 import cv2
+import timeit
 
 
 app = FastAPI()
@@ -48,14 +49,9 @@ async def disconnect(socket_object: WebSocket):
 async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
-            ws_a.receive
             data = await ws_a.receive_bytes()
-            frame = np.frombuffer(data, np.uint8)
+            frame = np.asarray(bytearray(data), np.uint8)
             frame = cv2.imdecode(frame, -1)
-            cv2.imshow('webcam', frame)
-            c = cv2.waitKey(1)
-            if c == 27:
-                break
             await queue_b.put(data)
     except WebSocketDisconnect:
         await disconnect(ws_a)
