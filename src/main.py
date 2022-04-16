@@ -64,7 +64,7 @@ async def forward(ws_a: WebSocket, queue_b):
             data = await ws_a.receive_bytes()
 
             str_data = np.asarray(bytearray(data), np.uint8)
-            str_data = base64.b64decode(str_data).decode('utf-8')
+            str_data = base64.b64decode(str_data)
             if str_data == 'ping':
                 await ws_a.send_bytes(b'ok')
             else:
