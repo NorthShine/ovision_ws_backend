@@ -64,7 +64,7 @@ async def forward(ws_a: WebSocket, queue_b):
             frame = cv2.imdecode(frame, -1)
             frame = transform(frame)
             frame = cv2.imencode('.jpg', frame)[1]
-            data = base64.b64encode(frame)
+            data = base64.b64encode(frame).decode('utf-8')
             await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
