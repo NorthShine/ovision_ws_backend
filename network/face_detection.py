@@ -44,8 +44,8 @@ def faceBox(faceNet, frame: np.array) -> np.array:
     return frame, bboxs
 
 
-def transform(frame: np.ndarray) -> np.ndarray:
-    frame, bboxs = faceBox(faceNet, frame)
+def transform(frame: np.array, facenet: cv2.dnn_Net, gendernet: cv2.dnn_Net, agenet: cv2.dnn_Net) -> np.array:
+    frame, bboxs = faceBox(facenet, frame)
     for bbox in bboxs:
         face = frame[max(0, bbox[1] - padding):min(bbox[3] + padding, frame.shape[0] - 1),
                max(0, bbox[0] - padding):min(bbox[2] + padding, frame.shape[1] - 1)]
@@ -53,12 +53,12 @@ def transform(frame: np.ndarray) -> np.ndarray:
         blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227),
                                      MODEL_MEAN_VALUES, swapRB=False)
 
-        genderNet.setInput(blob)
-        genderPred = genderNet.forward()
+        gendernet.setInput(blob)
+        genderPred = gendernet.forward()
         gender = genderList[genderPred[0].argmax()]
 
-        ageNet.setInput(blob)
-        agePred = ageNet.forward()
+        agenet.setInput(blob)
+        agePred = agenet.forward()
         age = ageList[agePred[0].argmax()]
 
         label = "{}, {}".format(gender, age)
