@@ -5,6 +5,9 @@ from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import janus
 import queue
+import numpy as np
+import cv2
+
 
 app = FastAPI()
 
@@ -34,7 +37,7 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
         yield sync_queue.get()
 
 
-async def disconnect(socket_object):
+async def disconnect(socket_object: WebSocket):
     await socket_object.close()
     for websocket_object in websocket_objects:
         if websocket_object == socket_object:
@@ -45,8 +48,14 @@ async def disconnect(socket_object):
 async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
+            ws_a.receive
             data = await ws_a.receive_bytes()
-            print("websocket A received:", data)
+            frame = np.frombuffer(data, np.uint8)
+            frame = cv2.imdecode(frame, -1)
+            cv2.imshow('webcam', frame)
+            c = cv2.waitKey(1)
+            if c == 27:
+                break
             await queue_b.put(data)
     except WebSocketDisconnect:
         await disconnect(ws_a)
@@ -59,7 +68,6 @@ async def reverse(queue_b, room_id):
             try:
                 if ws['room_id'] == room_id:
                     await ws['ws_object'].send_bytes(data)
-                    print("websocket A sent:", data)
             except WebSocketDisconnect:
                 await disconnect(ws['ws_object'])
 
