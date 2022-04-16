@@ -64,7 +64,7 @@ async def forward(ws_a: WebSocket, queue_b):
             data = await ws_a.receive_bytes()
 
             try:
-                if data.decode() == 'ping':
+                if data.decode('uint8') == 'ping':
                     await ws_a.send_bytes(b'ok')
             except UnicodeDecodeError:
                 pass
