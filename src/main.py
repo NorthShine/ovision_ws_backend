@@ -19,7 +19,7 @@ import base64
 
 from network.face_detection import transform
 
-WEBSOCKET_DISCONNECTED_STATE = 2
+WEBSOCKET_CONNECTED_STATE = 1
 
 app = FastAPI()
 
@@ -64,7 +64,7 @@ async def disconnect(socket_object: WebSocket):
 async def forward(ws_a: WebSocket, queue_b):
     try:
         while True:
-            if ws_a.client_state != WEBSOCKET_DISCONNECTED_STATE:
+            if ws_a.application_state == WEBSOCKET_CONNECTED_STATE:
                 data = await ws_a.receive_bytes()
                 frame = np.asarray(bytearray(data), np.uint8)
                 frame = cv2.imdecode(frame, -1)
@@ -80,7 +80,7 @@ async def reverse(queue_b, room_id):
     while True:
         data = await queue_b.get()
         for ws in websocket_objects:
-            if ws['room_id'] == room_id and ws.client_state != WEBSOCKET_DISCONNECTED_STATE:
+            if ws['room_id'] == room_id and ws.application_state == WEBSOCKET_CONNECTED_STATE:
                 try:
                     await ws['ws_object'].send_bytes(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
