@@ -24,7 +24,6 @@ padding = 20
 
 
 def faceBox(faceNet, frame: np.array) -> np.array:
-    print(frame)
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
     blob = cv2.dnn.blobFromImage(frame, 1.0, (227, 227), [104, 117, 123], swapRB=False)
@@ -46,10 +45,12 @@ def faceBox(faceNet, frame: np.array) -> np.array:
 
 def transform(frame: np.array, facenet: cv2.dnn_Net, gendernet: cv2.dnn_Net, agenet: cv2.dnn_Net) -> np.array:
     frame, bboxs = faceBox(facenet, frame)
+    if not bboxs:
+        return frame
+
     for bbox in bboxs:
         face = frame[max(0, bbox[1] - padding):min(bbox[3] + padding, frame.shape[0] - 1),
                max(0, bbox[0] - padding):min(bbox[2] + padding, frame.shape[1] - 1)]
-        print(type(face))
         blob = cv2.dnn.blobFromImage(face, 1.0, (227, 227),
                                      MODEL_MEAN_VALUES, swapRB=False)
 
