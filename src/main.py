@@ -68,6 +68,8 @@ async def forward(ws_a: WebSocket, queue_b):
             await queue_b.put(data)
     except (WebSocketDisconnect, ConnectionClosedError):
         await disconnect(ws_a)
+    except AssertionError:
+        pass
 
 
 async def reverse(queue_b, room_id):
