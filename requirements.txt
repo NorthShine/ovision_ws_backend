@@ -2,3 +2,6 @@ janus
 fastapi
 uvicorn
 websockets
+gunicorn
+opencv-python
+numpy
