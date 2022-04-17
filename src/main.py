@@ -1,6 +1,8 @@
 import asyncio
+import os
 import logging
 
+import motor.motor_asyncio
 from typing import Generator
 from fastapi import FastAPI
 from fastapi import WebSocket, WebSocketDisconnect
@@ -23,6 +25,10 @@ logger = logging.getLogger()
 
 websocket_objects = []
 websockets_lock = asyncio.Lock()
+
+mongodb_client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
+db = mongodb_client.ovision
+db.users.create_index('username', unique=True)
 
 origins = ["*"]
 
@@ -47,15 +53,21 @@ def queue_to_generator(sync_queue: queue.Queue) -> Generator:
         yield sync_queue.get()
 
 
+async def remove_ws_object_from_websockets(ws_obj):
+    async with websockets_lock:
+        for websocket_object in websocket_objects:
+            if websocket_object == ws_obj:
+                websocket_objects.remove(websocket_object)
+                break
+
+
 async def disconnect(socket_object: WebSocket):
     try:
         await socket_object.close()
     except RuntimeError:
         pass
-    for websocket_object in websocket_objects:
-        if websocket_object == socket_object:
-            websocket_objects.remove(websocket_object)
-            break
+    finally:
+        await remove_ws_object_from_websockets(socket_object)
 
 
 async def forward(ws_a: WebSocket, queue_b):
@@ -81,6 +93,8 @@ async def reverse(queue_b, room_id):
                     await ws['ws_object'].send_bytes(data)
                 except (WebSocketDisconnect, ConnectionClosedError):
                     await disconnect(ws['ws_object'])
+                except RuntimeError:
+                    await remove_ws_object_from_websockets(ws['ws_object'])
 
 
 def process_b_client(fwd_queue, rev_queue):
@@ -110,3 +124,26 @@ async def get_unique_room_id():
     if len(websocket_objects) == 0:
         return {'room_id': 1}
     return {'room_id': websocket_objects[-1]['room_id'] + 1}
+
+
+@app.post("/sign_up")
+async def sign_up(username: str):
+    await db.users.insert_one({
+        'username': username,
+    })
+    return {'status': 'ok'}
+
+
+@app.post("/sign_in")
+async def sign_in(username: str):
+    if await db.users.find_one(username):
+        return {'status': 'ok'}
+    return {'status': 'err', 'error': 'user does not exist'}
+
+
+@app.post("/set_photo")
+async def set_photo(username, photo_url):
+    if not await db.users.find_one(username):
+        return {'status': 'err', 'error': 'user does not exist'}
+    await db.users.update_one({'username': username}, {'$set': {'photo_url': photo_url}})
+    return {'status': 'ok'}
