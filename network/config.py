@@ -15,4 +15,7 @@ genderModel = "network/weights/gender_net.caffemodel"
 
 emoModel = "network/weights/emotion-ferplus.onnx"
 
+#face recognition
+FACES_DIR = "network/faces/"
+
 

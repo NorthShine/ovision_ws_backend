@@ -5,3 +5,4 @@ websockets
 gunicorn
 opencv-python
 numpy
+face-recognition
