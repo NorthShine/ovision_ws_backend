@@ -6,3 +6,4 @@ gunicorn
 opencv-python
 numpy
 face-recognition
+motor
