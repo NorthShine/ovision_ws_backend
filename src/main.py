@@ -4,7 +4,7 @@ import logging
 
 import motor.motor_asyncio
 from typing import Generator
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from websockets.exceptions import ConnectionClosedError
@@ -127,23 +127,26 @@ async def get_unique_room_id():
 
 
 @app.post("/sign_up")
-async def sign_up(username: str):
+async def sign_up(request: Request):
+    data = await request.json()
     await db.users.insert_one({
-        'username': username,
+        'username': data['username'],
     })
     return {'status': 'ok'}
 
 
 @app.post("/sign_in")
-async def sign_in(username: str):
-    if await db.users.find_one(username):
+async def sign_in(request: Request):
+    data = await request.json()
+    if await db.users.find_one(data['username']):
         return {'status': 'ok'}
     return {'status': 'err', 'error': 'user does not exist'}
 
 
 @app.post("/set_photo")
-async def set_photo(username, photo_url):
-    if not await db.users.find_one(username):
+async def set_photo(request: Request):
+    data = await request.json()
+    if not await db.users.find_one(data['username']):
         return {'status': 'err', 'error': 'user does not exist'}
-    await db.users.update_one({'username': username}, {'$set': {'photo_url': photo_url}})
+    await db.users.update_one({'username': data['username']}, {'$set': {'photo_url': data['photo_url']}})
     return {'status': 'ok'}
